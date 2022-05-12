@@ -1,9 +1,9 @@
-package me.aylias.plugins.j48.wipeout;
+package live.wipeout.wipeout.game;
 
+import live.wipeout.wipeout.game.team.TeamHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
-import org.bukkit.block.Block;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +16,7 @@ public class Checkpoint {
 
     int index = 0;
 
-    List<TeamHandler.CustomTeam> passed = new ArrayList<>();
+    List<TeamHandler.CustomTeam> passed = new ArrayList<TeamHandler.CustomTeam>();
 
     public Checkpoint(Location location, Integer[] points, int defaultPoints) {
         this.location = location;
