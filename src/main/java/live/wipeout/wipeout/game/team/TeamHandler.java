@@ -1,10 +1,10 @@
-package me.aylias.plugins.j48.wipeout;
+package live.wipeout.wipeout.game.team;
 
+import live.wipeout.wipeout.Main;
+import live.wipeout.wipeout.game.Checkpoint;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
-import org.bukkit.World;
-import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -22,7 +22,8 @@ import org.bukkit.scoreboard.Team;
 import java.util.ArrayList;
 import java.util.List;
 
-public class TeamHandler implements CommandExecutor, TabCompleter, Listener {
+public class
+TeamHandler implements CommandExecutor, TabCompleter, Listener {
 
     List<CustomTeam> teams = new ArrayList<>();
 
@@ -76,7 +77,7 @@ public class TeamHandler implements CommandExecutor, TabCompleter, Listener {
 
     @EventHandler
     public void playerMove(PlayerMoveEvent e) {
-        var p = e.getPlayer();
+        Player p = e.getPlayer();
 
         teams.forEach(team -> {
             if (team.players.contains(p)) {
@@ -94,8 +95,9 @@ public class TeamHandler implements CommandExecutor, TabCompleter, Listener {
 
     @EventHandler
     public void playerJoin(PlayerJoinEvent e) {
+        // fix trying to add a player to a non-existent team.
+        if (teams.isEmpty()) return;
         teams.get(0).players.add(e.getPlayer());
-
     }
 
     public boolean sendTeamMessage(Player player, String message) {
@@ -118,6 +120,14 @@ public class TeamHandler implements CommandExecutor, TabCompleter, Listener {
 
             if (args[0].equalsIgnoreCase("add")) {
                 addPlayersToTeam(args, sender);
+                return true;
+            }
+
+            // /mcw_teams empty <teamName>
+            if (args[0].equalsIgnoreCase("empty")) {
+                if (args.length <= 1) return true;
+                String teamToEmpty = args[1];
+                commandEmptyTeam(teamToEmpty, sender);
                 return true;
             }
 
@@ -146,7 +156,7 @@ public class TeamHandler implements CommandExecutor, TabCompleter, Listener {
         ArrayList<String> failed = new ArrayList<>();
 
         for (int i = 2; i < args.length; i++) {
-            var p = Bukkit.getPlayer(args[i]);
+            Player p = Bukkit.getPlayer(args[i]);
             if (p == null) {
                 failed.add(args[i]);
                 continue;
@@ -165,9 +175,9 @@ public class TeamHandler implements CommandExecutor, TabCompleter, Listener {
             }
         }
 
-        var msg = "Succesfully added " + ChatColor.GREEN;
-        var del = ChatColor.WHITE + ", " + ChatColor.GREEN;
-        var conv = new ArrayList<String>();
+        String msg = "Succesfully added " + ChatColor.GREEN;
+        String del = ChatColor.WHITE + ", " + ChatColor.GREEN;
+        ArrayList<String> conv = new ArrayList<>();
         success.forEach(p -> conv.add(p.getName()));
 
         msg += String.join(del, conv);
@@ -206,15 +216,21 @@ public class TeamHandler implements CommandExecutor, TabCompleter, Listener {
             values.add("create");
             values.add("add");
             values.add("start");
+            values.add("empty");
         }
 
         if (args.length == 2) {
             if (args[0].equalsIgnoreCase("add")) {
                 teams.forEach(team -> values.add(team.name));
-            } else if (args[0].equalsIgnoreCase("create")) {
+            }
+            else if (args[0].equalsIgnoreCase("create")) {
                 for (CommandColors value : CommandColors.values()) {
                     values.add(value.colorName);
                 }
+            }
+            else if (args[0].equalsIgnoreCase("empty")) {
+                // /mcw_teams empty <TeamName>
+                teams.forEach(team -> values.add(team.name));
             }
         }
 
@@ -222,6 +238,54 @@ public class TeamHandler implements CommandExecutor, TabCompleter, Listener {
             Bukkit.getOnlinePlayers().forEach(p -> values.add(p.getName()));
 
         return values;
+    }
+
+    /**
+     * Empties the inputed team
+     */
+    public void commandEmptyTeam(String teamToEmpty, CommandSender sender)
+    {
+        if (!doesTeamExist(teamToEmpty))
+            sender.sendMessage(ChatColor.RED + "The inputed team doesn't exist.");
+
+        // Empty the team
+        CustomTeam customTeamToEmpty = getTeamByName(teamToEmpty);
+        customTeamToEmpty.players.clear();
+
+        // Player feedback message
+        String msg = "Successfully removed every player from team " + customTeamToEmpty.name;
+        sender.sendMessage(ChatColor.GREEN + msg);
+    }
+
+    /**
+     *
+     * @param teamName
+     * @return true if the inputed teamName is the name of a currently existing team.
+     */
+    public boolean doesTeamExist(String teamName)
+    {
+        for (CustomTeam team : teams)
+        {
+            if (team.name.equalsIgnoreCase(teamName))
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     *
+     * @param teamName
+     * @return the {@code CustomTeam} with the inputed name. Returns null if it doesn't exist.
+     */
+    public CustomTeam getTeamByName(String teamName)
+    {
+        for (CustomTeam team : teams)
+        {
+            if (team.name.equalsIgnoreCase(teamName))
+                return team;
+        }
+
+        return null;
     }
 
     public static class CustomTeam {

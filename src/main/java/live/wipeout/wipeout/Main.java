@@ -1,5 +1,7 @@
-package me.aylias.plugins.j48.wipeout;
+package live.wipeout.wipeout;
 
+import live.wipeout.wipeout.game.Game;
+import live.wipeout.wipeout.game.team.TeamHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -43,7 +45,7 @@ public class Main extends JavaPlugin {
                 return true;
             }
 
-            var player = Bukkit.getPlayer(args[0]);
+            Player player = Bukkit.getPlayer(args[0]);
             if (player == null) {
                 sender.sendMessage(ChatColor.RED + args[0] + " is not a valid player");
                 return true;
@@ -51,13 +53,13 @@ public class Main extends JavaPlugin {
 
             if (game != null) {
                 HandlerList.unregisterAll(game);
-                game.gameTimer.cancel();
+                game.getGameTimer().cancel();
             }
 
             game = null;
 
             game = new Game();
-            game.start(player, getConfig());
+            // TODO: game.start(player, getConfig());
 
             getServer().getPluginManager().registerEvents(game, this);
         }
@@ -68,7 +70,7 @@ public class Main extends JavaPlugin {
     public void cancelGame() {
         if (game != null) {
             HandlerList.unregisterAll(game);
-            game.gameTimer.cancel();
+            game.getGameTimer().cancel();
         }
 
         game = null;

@@ -1,6 +1,9 @@
-package me.aylias.plugins.j48.wipeout;
+package live.wipeout.wipeout.game;
 
+import live.wipeout.wipeout.Main;
+import lombok.Getter;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -10,34 +13,32 @@ import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.util.ArrayList;
 
+@Getter
 public class Game implements Listener {
 
-    private Player participant;
-
-    GameTimer gameTimer = new GameTimer();
-
+    private ArrayList<Player> participants;
+    private GameTimer gameTimer = new GameTimer();
     Location startLoc;
-
     ArrayList<Location> checkpoints = new ArrayList<>();
-
     Location lastCP;
-
     boolean running = true;
     boolean started = false;
 
-    public void start(Player participant, FileConfiguration config) {
-        participant.getWorld().setGameRule(GameRule.SEND_COMMAND_FEEDBACK, false);
+    public void start(ArrayList<Player> participants, FileConfiguration config) {
+        participants.forEach(p -> {
+            p.getWorld().setGameRule(GameRule.SEND_COMMAND_FEEDBACK, false);
+        });
 
         gameTimer.runTaskTimer(Main.getPlugin(Main.class), 1, 1);
 
-        this.participant = participant;
+        this.participants = participants;
 
-        var x = config.getInt("start.x");
-        var y = config.getInt("start.y");
-        var z = config.getInt("start.z");
-        var yaw = config.getInt("start.yaw");
+        int x = config.getInt("start.x");
+        int y = config.getInt("start.y");
+        int z = config.getInt("start.z");
+        int yaw = config.getInt("start.yaw");
 
-        startLoc = new Location(participant.getWorld(), x, y, z, yaw, 0);
+        startLoc = new Location(participants.get(0).getWorld(), x, y, z, yaw, 0);
 
 //        for (int i = 0; i < 100; i++) {
 //            var path = "checkpoints." + i;
@@ -54,32 +55,36 @@ public class Game implements Listener {
 //        System.out.println(startLoc);
 
         lastCP = startLoc;
-        participant.teleport(startLoc);
+        participants.forEach(p -> {
+            p.teleport(startLoc);
+        });
     }
 
     @EventHandler
     public void onPlayerLeave(PlayerQuitEvent e) {
-        if (e.getPlayer().equals(participant)) {
+        if (getParticipants().contains(e.getPlayer())) {
             Main.getPlugin(Main.class).cancelGame();
         }
     }
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent e) {
-        if (participant == null) return;
-        if (!e.getPlayer().equals(participant)) return;
+        if (getParticipants() == null) return;
+        if (!getParticipants().contains(e.getPlayer())) return;
 
-        if (!started)
+        if (!started) return;
 
-        if (participant.getWorld().getBlockAt(participant.getLocation().clone().add(0, -1, 0)).getType().equals(Material.WHITE_STAINED_GLASS))
-            lastCP = participant.getLocation().clone();
 
-        if (participant.getWorld().getBlockAt(participant.getLocation().clone().add(0, -1, 0)).getType().equals(Material.BLACK_STAINED_GLASS))
-            participant.teleport(lastCP);
+        Block blockUnderPlayer = e.getPlayer().getWorld().getBlockAt(e.getPlayer().getLocation().add(0, -1, 0));
+        if (blockUnderPlayer.getType().equals(Material.WHITE_STAINED_GLASS))
+            lastCP = e.getPlayer().getLocation().clone();
 
-        if (participant.getWorld().getBlockAt(participant.getLocation().clone().add(0, -1, 0)).getType().equals(Material.YELLOW_CONCRETE) && running) {
-            gameTimer.cancel();
-            var ticks = gameTimer.ticks;
+        if (blockUnderPlayer.getType().equals(Material.BLACK_STAINED_GLASS))
+            e.getPlayer().teleport(lastCP);
+
+        if (blockUnderPlayer.getType().equals(Material.YELLOW_CONCRETE) && running) {
+            getGameTimer().cancel();
+            long ticks = getGameTimer().getTicks();
 
             Long nticks = ticks % 20;
             long seconds = (ticks - nticks) / 20;
